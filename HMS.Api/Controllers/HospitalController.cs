@@ -6,23 +6,16 @@ namespace HMS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class HospitalController : ControllerBase
+public class HospitalController(IOptions<HospitalSettingsOptions> options) : ControllerBase
 {
-    private readonly HospitalSettingsOptions _options;
-
-    public HospitalController(IOptions<HospitalSettingsOptions> options)
-    {
-        _options = options.Value;
-    }
-
     [HttpGet("info")]
     public IActionResult GetHospitalInfo()
     {
         return Ok(new
         {
-            Hospital = _options.HospitalName,
-            Capacity = _options.MaxBedCapacity,
-            Fee = _options.DefaultConsultationFee
+            Hospital = options.Value.HospitalName,
+            Capacity = options.Value.MaxBedCapacity,
+            Fee = options.Value.DefaultConsultationFee
         });
     }
 }
