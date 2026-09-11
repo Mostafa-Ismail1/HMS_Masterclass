@@ -1,0 +1,5 @@
+@baseUrl = https://localhost:7219
+
+################
+GET {{baseUrl}}/api/Hospital/info
+
