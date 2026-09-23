@@ -1,11 +1,16 @@
 using System.Diagnostics;
 using HMS.Api;
+using HMS.Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.Configure<HospitalSettingsOptions>(
     builder.Configuration.GetSection(HospitalSettingsOptions.SectionName));
+
+builder.Services.AddDbContext<HmsDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
