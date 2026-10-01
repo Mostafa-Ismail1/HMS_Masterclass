@@ -1,6 +1,113 @@
 @baseUrl = https://localhost:7219
 
-################
-GET {{baseUrl}}/api/Hospital/info
+############################################################
+# 1. Hospital Info & Emergency
+############################################################
+GET {{baseUrl}}/api/hospital/info
 
+###
+GET {{baseUrl}}/emergency
 
+############################################################
+# 2. Departments API
+############################################################
+# GET All Departments (JSON)
+GET {{baseUrl}}/api/departments
+Accept: application/json
+
+###
+# GET All Departments (XML Content Negotiation)
+GET {{baseUrl}}/api/departments
+Accept: application/xml
+
+###
+# GET Department By ID
+GET {{baseUrl}}/api/departments/1
+
+###
+# HEAD Department (Headers Only)
+HEAD {{baseUrl}}/api/departments/1
+
+###
+# OPTIONS Department (Allowed Verbs)
+OPTIONS {{baseUrl}}/api/departments
+
+###
+# POST Create Department
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "departmentName": "Pediatrics",
+  "location": "Building C, 2nd Floor"
+}
+
+###
+# PUT Update Department
+PUT {{baseUrl}}/api/departments/1
+Content-Type: application/json
+
+{
+  "departmentName": "General Surgery",
+  "location": "Building A, 3rd Floor"
+}
+
+###
+# DELETE Department
+DELETE {{baseUrl}}/api/departments/999
+
+############################################################
+# 3. Doctors API
+############################################################
+# GET All Doctors
+GET {{baseUrl}}/api/doctors
+
+###
+# GET Doctors filtered by Specialization
+GET {{baseUrl}}/api/doctors?specialization=Cardiology
+
+###
+# GET Doctor By ID
+GET {{baseUrl}}/api/doctors/1
+
+###
+# POST Create Doctor (with linked Staff record)
+POST {{baseUrl}}/api/doctors
+Content-Type: application/json
+
+{
+  "firstName": "Tarek",
+  "lastName": "Ibrahim",
+  "email": "tarek.ibrahim@hospital.com",
+  "phone": "01012345678",
+  "departmentId": 1,
+  "specialization": "Cardiology",
+  "licenseNumber": "MED-2026-9901",
+  "salary": 18000.00
+}
+
+############################################################
+# 4. Patients API
+############################################################
+# GET All Patients (Pagination & Filtering)
+GET {{baseUrl}}/api/patients?page=1&pageSize=10
+
+###
+# GET Patient By ID
+GET {{baseUrl}}/api/patients/1
+
+###
+# POST Create Patient
+POST {{baseUrl}}/api/patients
+Content-Type: application/json
+
+{
+  "firstName": "Youssef",
+  "lastName": "Ali",
+  "dob": "1995-04-12",
+  "phone": "01234567890",
+  "gender": "M",
+  "email": "youssef.ali@example.com",
+  "address": "15 Nile St, Cairo",
+  "bloodType": "A+"
+}
