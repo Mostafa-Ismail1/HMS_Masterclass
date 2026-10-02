@@ -1,75 +1,62 @@
-using HMS.Api.Data;
 using HMS.Api.Data.Entities;
+using HMS.Api.Data.Repositories;
 using HMS.Api.DTOs.Doctors;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace HMS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class DoctorsController(HmsDbContext context) : ControllerBase
+public class DoctorsController(IUnitOfWork unitOfWork) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<DoctorResponseDto>>> GetAll([FromQuery] string? specialization)
+    public async Task<ActionResult<IEnumerable<DoctorResponseDto>>> GetAll(
+        [FromQuery] string? specialization,
+        CancellationToken cancellationToken)
     {
-        var query = context.Doctors
-            .AsNoTracking()
-            .Include(d => d.DoctorNavigation)
-            .ThenInclude(s => s.Department)
-            .AsQueryable();
+        var doctors = await unitOfWork.Doctors.GetAllWithDetailsAsync(specialization, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(specialization))
+        var dtos = doctors.Select(d => new DoctorResponseDto
         {
-            query = query.Where(d => d.Specialization.Contains(specialization));
-        }
+            DoctorId = d.DoctorId,
+            FullName = $"Dr. {d.DoctorNavigation.FirstName} {d.DoctorNavigation.LastName}",
+            Specialization = d.Specialization,
+            LicenseNumber = d.LicenseNumber,
+            DepartmentName = d.DoctorNavigation.Department.DepartmentName,
+            Email = d.DoctorNavigation.Email,
+            Phone = d.DoctorNavigation.Phone
+        });
 
-        var doctors = await query
-            .Select(d => new DoctorResponseDto
-            {
-                DoctorId = d.DoctorId,
-                FullName = $"Dr. {d.DoctorNavigation.FirstName} {d.DoctorNavigation.LastName}",
-                Specialization = d.Specialization,
-                LicenseNumber = d.LicenseNumber,
-                DepartmentName = d.DoctorNavigation.Department.DepartmentName,
-                Email = d.DoctorNavigation.Email,
-                Phone = d.DoctorNavigation.Phone
-            })
-            .ToListAsync();
-
-        return Ok(doctors);
+        return Ok(dtos);
     }
 
     [HttpGet("{id:int}", Name = nameof(GetDoctorById))]
-    public async Task<ActionResult<DoctorResponseDto>> GetDoctorById(int id)
+    public async Task<ActionResult<DoctorResponseDto>> GetDoctorById(int id, CancellationToken cancellationToken)
     {
-        var doctor = await context.Doctors
-            .AsNoTracking()
-            .Where(d => d.DoctorId == id)
-            .Select(d => new DoctorResponseDto
-            {
-                DoctorId = d.DoctorId,
-                FullName = $"Dr. {d.DoctorNavigation.FirstName} {d.DoctorNavigation.LastName}",
-                Specialization = d.Specialization,
-                LicenseNumber = d.LicenseNumber,
-                DepartmentName = d.DoctorNavigation.Department.DepartmentName,
-                Email = d.DoctorNavigation.Email,
-                Phone = d.DoctorNavigation.Phone
-            })
-            .FirstOrDefaultAsync();
-
+        var doctor = await unitOfWork.Doctors.GetByIdWithDetailsAsync(id, cancellationToken);
         if (doctor is null)
         {
             return NotFound(new { message = $"Doctor with ID {id} was not found." });
         }
 
-        return Ok(doctor);
+        var responseDto = new DoctorResponseDto
+        {
+            DoctorId = doctor.DoctorId,
+            FullName = $"Dr. {doctor.DoctorNavigation.FirstName} {doctor.DoctorNavigation.LastName}",
+            Specialization = doctor.Specialization,
+            LicenseNumber = doctor.LicenseNumber,
+            DepartmentName = doctor.DoctorNavigation.Department.DepartmentName,
+            Email = doctor.DoctorNavigation.Email,
+            Phone = doctor.DoctorNavigation.Phone
+        };
+
+        return Ok(responseDto);
     }
 
     [HttpHead("{id:int}")]
-    public async Task<IActionResult> CheckDoctorExists(int id)
+    public async Task<IActionResult> CheckDoctorExists(int id, CancellationToken cancellationToken)
     {
-        var exists = await context.Doctors.AnyAsync(d => d.DoctorId == id);
+        var exists = await unitOfWork.Doctors.AnyAsync(d => d.DoctorId == id, cancellationToken);
         return exists ? Ok() : NotFound();
     }
 
@@ -81,9 +68,9 @@ public class DoctorsController(HmsDbContext context) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<DoctorResponseDto>> Create(CreateDoctorRequestDto request)
+    public async Task<ActionResult<DoctorResponseDto>> Create(CreateDoctorRequestDto request, CancellationToken cancellationToken)
     {
-        var department = await context.Departments.FindAsync(request.DepartmentId);
+        var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken);
         if (department is null)
         {
             return BadRequest(new { message = $"Department with ID {request.DepartmentId} does not exist." });
@@ -101,8 +88,8 @@ public class DoctorsController(HmsDbContext context) : ControllerBase
             Salary = request.Salary
         };
 
-        context.Staff.Add(staff);
-        await context.SaveChangesAsync();
+        await unitOfWork.Staff.AddAsync(staff, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var doctor = new Doctor
         {
@@ -111,8 +98,8 @@ public class DoctorsController(HmsDbContext context) : ControllerBase
             LicenseNumber = request.LicenseNumber
         };
 
-        context.Doctors.Add(doctor);
-        await context.SaveChangesAsync();
+        await unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var responseDto = new DoctorResponseDto
         {
@@ -129,12 +116,9 @@ public class DoctorsController(HmsDbContext context) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, UpdateDoctorRequestDto request)
+    public async Task<IActionResult> Update(int id, UpdateDoctorRequestDto request, CancellationToken cancellationToken)
     {
-        var doctor = await context.Doctors
-            .Include(d => d.DoctorNavigation)
-            .FirstOrDefaultAsync(d => d.DoctorId == id);
-
+        var doctor = await unitOfWork.Doctors.GetByIdWithDetailsAsync(id, cancellationToken);
         if (doctor is null)
         {
             return NotFound(new { message = $"Doctor with ID {id} was not found." });
@@ -144,32 +128,29 @@ public class DoctorsController(HmsDbContext context) : ControllerBase
         doctor.DoctorNavigation.Phone = request.Phone;
         doctor.DoctorNavigation.Email = request.Email;
 
-        await context.SaveChangesAsync();
+        unitOfWork.Doctors.Update(doctor);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var doctor = await context.Doctors
-            .Include(d => d.Appointments)
-            .Include(d => d.DoctorNavigation)
-            .FirstOrDefaultAsync(d => d.DoctorId == id);
-
+        var doctor = await unitOfWork.Doctors.GetByIdWithDetailsAsync(id, cancellationToken);
         if (doctor is null)
         {
             return NotFound(new { message = $"Doctor with ID {id} was not found." });
         }
 
-        if (doctor.Appointments.Any())
+        if (doctor.Appointments.Count > 0)
         {
             return Conflict(new { message = "Cannot delete doctor with assigned appointments." });
         }
 
-        context.Doctors.Remove(doctor);
-        context.Staff.Remove(doctor.DoctorNavigation);
-        await context.SaveChangesAsync();
+        unitOfWork.Doctors.Delete(doctor);
+        unitOfWork.Staff.Delete(doctor.DoctorNavigation);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }

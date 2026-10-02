@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using HMS.Api;
 using HMS.Api.Data;
+using HMS.Api.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +13,12 @@ builder.Services.Configure<HospitalSettingsOptions>(
 
 builder.Services.AddDbContext<HmsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IPatientRepository, PatientRepository>();
+builder.Services.AddScoped<IDoctorRepository, DoctorRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -28,12 +35,23 @@ app.Use(async (context, next) =>
 {
     var stopwatch = Stopwatch.StartNew();
 
-    await next();
+    try
+    {
+        await next();
 
-    stopwatch.Stop();
-    Console.ForegroundColor = ConsoleColor.Cyan;
-    Console.WriteLine($"[Profiler] {context.Request.Method} {context.Request.Path} took {stopwatch.ElapsedMilliseconds} ms");
-    Console.ResetColor();
+        stopwatch.Stop();
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine($"[Profiler] {context.Request.Method} {context.Request.Path} took {stopwatch.ElapsedMilliseconds} ms");
+        Console.ResetColor();
+    }
+    catch (OperationCanceledException)
+    {
+        stopwatch.Stop();
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"[Profiler] CANCELLED: {context.Request.Method} {context.Request.Path} was ABORTED after {stopwatch.ElapsedMilliseconds} ms! Server freed immediately.");
+        Console.ResetColor();
+        throw;
+    }
 });
 
 // 2. Branch: emergency requests

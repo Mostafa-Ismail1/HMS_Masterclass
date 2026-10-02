@@ -1,87 +1,69 @@
-using HMS.Api.Data;
 using HMS.Api.Data.Entities;
+using HMS.Api.Data.Repositories;
 using HMS.Api.DTOs.Patients;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace HMS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PatientsController(HmsDbContext context) : ControllerBase
+public class PatientsController(IUnitOfWork unitOfWork) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PatientResponseDto>>> GetAll(
         [FromQuery] string? bloodType,
         [FromQuery] string? gender,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
     {
-        var query = context.Patients.AsNoTracking();
+        var patients = await unitOfWork.Patients.GetPatientsAsync(bloodType, gender, page, pageSize, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(bloodType))
+        var dtos = patients.Select(p => new PatientResponseDto
         {
-            query = query.Where(p => p.BloodType == bloodType);
-        }
+            PatientId = p.PatientId,
+            FullName = $"{p.FirstName} {p.LastName}",
+            Dob = p.Dob,
+            Phone = p.Phone,
+            Gender = p.Gender,
+            Email = p.Email,
+            Address = p.Address,
+            BloodType = p.BloodType,
+            ActiveAppointmentsCount = p.Appointments.Count
+        });
 
-        if (!string.IsNullOrWhiteSpace(gender))
-        {
-            query = query.Where(p => p.Gender == gender);
-        }
-
-        var patients = await query
-            .OrderBy(p => p.PatientId)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(p => new PatientResponseDto
-            {
-                PatientId = p.PatientId,
-                FullName = $"{p.FirstName} {p.LastName}",
-                Dob = p.Dob,
-                Phone = p.Phone,
-                Gender = p.Gender,
-                Email = p.Email,
-                Address = p.Address,
-                BloodType = p.BloodType,
-                ActiveAppointmentsCount = p.Appointments.Count
-            })
-            .ToListAsync();
-
-        return Ok(patients);
+        return Ok(dtos);
     }
 
     [HttpGet("{id:int}", Name = nameof(GetPatientById))]
-    public async Task<ActionResult<PatientResponseDto>> GetPatientById(int id)
+    public async Task<ActionResult<PatientResponseDto>> GetPatientById(int id, CancellationToken cancellationToken)
     {
-        var patient = await context.Patients
-            .AsNoTracking()
-            .Where(p => p.PatientId == id)
-            .Select(p => new PatientResponseDto
-            {
-                PatientId = p.PatientId,
-                FullName = $"{p.FirstName} {p.LastName}",
-                Dob = p.Dob,
-                Phone = p.Phone,
-                Gender = p.Gender,
-                Email = p.Email,
-                Address = p.Address,
-                BloodType = p.BloodType,
-                ActiveAppointmentsCount = p.Appointments.Count
-            })
-            .FirstOrDefaultAsync();
-
+        var patient = await unitOfWork.Patients.GetByIdWithAppointmentsAsync(id, cancellationToken);
         if (patient is null)
         {
             return NotFound(new { message = $"Patient with ID {id} was not found." });
         }
 
-        return Ok(patient);
+        var responseDto = new PatientResponseDto
+        {
+            PatientId = patient.PatientId,
+            FullName = $"{patient.FirstName} {patient.LastName}",
+            Dob = patient.Dob,
+            Phone = patient.Phone,
+            Gender = patient.Gender,
+            Email = patient.Email,
+            Address = patient.Address,
+            BloodType = patient.BloodType,
+            ActiveAppointmentsCount = patient.Appointments.Count
+        };
+
+        return Ok(responseDto);
     }
 
     [HttpHead("{id:int}")]
-    public async Task<IActionResult> CheckPatientExists(int id)
+    public async Task<IActionResult> CheckPatientExists(int id, CancellationToken cancellationToken)
     {
-        var exists = await context.Patients.AnyAsync(p => p.PatientId == id);
+        var exists = await unitOfWork.Patients.AnyAsync(p => p.PatientId == id, cancellationToken);
         return exists ? Ok() : NotFound();
     }
 
@@ -93,7 +75,7 @@ public class PatientsController(HmsDbContext context) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<PatientResponseDto>> Create(CreatePatientRequestDto request)
+    public async Task<ActionResult<PatientResponseDto>> Create(CreatePatientRequestDto request, CancellationToken cancellationToken)
     {
         var patient = new Patient
         {
@@ -107,8 +89,8 @@ public class PatientsController(HmsDbContext context) : ControllerBase
             BloodType = request.BloodType
         };
 
-        context.Patients.Add(patient);
-        await context.SaveChangesAsync();
+        await unitOfWork.Patients.AddAsync(patient, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var responseDto = new PatientResponseDto
         {
@@ -127,9 +109,9 @@ public class PatientsController(HmsDbContext context) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, UpdatePatientRequestDto request)
+    public async Task<IActionResult> Update(int id, UpdatePatientRequestDto request, CancellationToken cancellationToken)
     {
-        var patient = await context.Patients.FindAsync(id);
+        var patient = await unitOfWork.Patients.GetByIdAsync(id, cancellationToken);
         if (patient is null)
         {
             return NotFound(new { message = $"Patient with ID {id} was not found." });
@@ -139,30 +121,28 @@ public class PatientsController(HmsDbContext context) : ControllerBase
         patient.Email = request.Email;
         patient.Address = request.Address;
 
-        await context.SaveChangesAsync();
+        unitOfWork.Patients.Update(patient);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var patient = await context.Patients
-            .Include(p => p.Appointments)
-            .FirstOrDefaultAsync(p => p.PatientId == id);
-
+        var patient = await unitOfWork.Patients.GetByIdWithAppointmentsAsync(id, cancellationToken);
         if (patient is null)
         {
             return NotFound(new { message = $"Patient with ID {id} was not found." });
         }
 
-        if (patient.Appointments.Any())
+        if (patient.Appointments.Count > 0)
         {
             return Conflict(new { message = "Cannot delete patient with active appointments on file." });
         }
 
-        context.Patients.Remove(patient);
-        await context.SaveChangesAsync();
+        unitOfWork.Patients.Delete(patient);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
