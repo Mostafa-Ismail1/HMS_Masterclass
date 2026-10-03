@@ -1,10 +1,12 @@
 using HMS.Api.Data.Entities;
 using HMS.Api.Data.Repositories;
 using HMS.Api.DTOs.Departments;
+using HMS.Api.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ServiceFilter(typeof(LogActionActivityFilter))]
 [ApiController]
 [Route("api/[controller]")]
 public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
