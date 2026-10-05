@@ -33,7 +33,7 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
         var department = await unitOfWork.Departments.GetByIdWithStaffAsync(id, cancellationToken);
         if (department is null)
         {
-            return NotFound(new { message = $"Department with ID {id} was not found." });
+            return NotFound();
         }
 
         var responseDto = new DepartmentResponseDto
@@ -90,7 +90,7 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
         var department = await unitOfWork.Departments.GetByIdAsync(id, cancellationToken);
         if (department is null)
         {
-            return NotFound(new { message = $"Department with ID {id} was not found." });
+            return NotFound();
         }
 
         department.DepartmentName = request.DepartmentName;

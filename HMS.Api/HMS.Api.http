@@ -54,7 +54,7 @@ Content-Type: application/json
 
 ###
 # DELETE Department
-DELETE {{baseUrl}}/api/departments/999
+DELETE {{baseUrl}}/api/departments/9
 
 ############################################################
 # 3. Doctors API
@@ -111,3 +111,19 @@ Content-Type: application/json
   "address": "15 Nile St, Cairo",
   "bloodType": "A+"
 }
+
+############################################################
+# 5. Error Handling Tests (RFC 9457 Problem Details)
+############################################################
+
+### GET Non-existent Department (Returns RFC 9457 Problem Details 404)
+GET {{baseUrl}}/api/departments/999
+
+### POST Invalid Payload (Returns RFC 9457 Validation Problem Details 400)
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "departmentName": [1, 2, 3]
+}
+

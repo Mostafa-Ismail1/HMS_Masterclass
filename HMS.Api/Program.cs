@@ -3,6 +3,7 @@ using HMS.Api;
 using HMS.Api.Data;
 using HMS.Api.Data.Repositories;
 using HMS.Api.Filters;
+using HMS.Api.Middlewares;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,9 @@ builder.Services.AddControllers()
     .AddXmlSerializerFormatters();
 builder.Services.Configure<HospitalSettingsOptions>(
     builder.Configuration.GetSection(HospitalSettingsOptions.SectionName));
+
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddDbContext<HmsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -26,6 +30,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
