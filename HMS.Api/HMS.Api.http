@@ -127,3 +127,90 @@ Content-Type: application/json
   "departmentName": [1, 2, 3]
 }
 
+############################################################
+# 6. Module 18: FluentValidation Tests
+############################################################
+
+### [Test 1: Empty Department Name - Should Return 400]
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "departmentName": ""
+}
+
+### [Test 2: Name Too Short (< 3 characters) - Should Return 400]
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "departmentName": "IC"
+}
+
+### [Test 3: Enterprise Killer Feature - Duplicate Name in DB - Should Return 400]
+# "Cardiology" is already in HMS_DB! FluentValidation checks the DB via MustAsync!
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "departmentName": "Surgery",
+  "location": "Building A"
+}
+
+### [Test 4: Valid Unique Department - Should Return 201 Created]
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "departmentName": "Oncology",
+  "location": "Building D, 1st Floor"
+}
+
+### [Test 5: Doctor Validation - Invalid Egyptian Phone & Low Salary < 6000 EGP]
+# Should return 400 with both Phone and Salary errors!
+POST {{baseUrl}}/api/doctors
+Content-Type: application/json
+
+{
+  "firstName": "Hany",
+  "lastName": "Shaker",
+  "email": "hany.shaker@hospital.com",
+  "phone": "12345",
+  "departmentId": 1,
+  "specialization": "Cardiology",
+  "licenseNumber": "MED-2026-1111",
+  "salary": 3000.00
+}
+
+### [Test 6: Doctor Validation - Department Does Not Exist in DB]
+# Department 999 does not exist! Should return 400 via MustAsync check!
+POST {{baseUrl}}/api/doctors
+Content-Type: application/json
+
+{
+  "firstName": "Hany",
+  "lastName": "Shaker",
+  "email": "hany.shaker@hospital.com",
+  "phone": "01011112222",
+  "departmentId": 999,
+  "specialization": "Cardiology",
+  "licenseNumber": "MED-2026-1111",
+  "salary": 15000.00
+}
+
+### [Test 7: Patient Validation - Future DOB & Invalid Blood Type]
+# DOB is in year 2099 and BloodType "XYZ" is invalid! Should return 400!
+POST {{baseUrl}}/api/patients
+Content-Type: application/json
+
+{
+  "firstName": "Sami",
+  "lastName": "Youssef",
+  "dob": "2099-01-01",
+  "phone": "01122334455",
+  "gender": "M",
+  "email": "sami@example.com",
+  "bloodType": "XYZ"
+}
+
+

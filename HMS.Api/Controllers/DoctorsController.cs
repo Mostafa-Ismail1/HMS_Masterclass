@@ -1,6 +1,8 @@
+using FluentValidation;
 using HMS.Api.Data.Entities;
 using HMS.Api.Data.Repositories;
 using HMS.Api.DTOs.Doctors;
+using HMS.Api.Validators;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
@@ -68,13 +70,19 @@ public class DoctorsController(IUnitOfWork unitOfWork) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<DoctorResponseDto>> Create(CreateDoctorRequestDto request, CancellationToken cancellationToken)
+    public async Task<ActionResult<DoctorResponseDto>> Create(
+        CreateDoctorRequestDto request,
+        IValidator<CreateDoctorRequestDto> validator,
+        CancellationToken cancellationToken)
     {
-        var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken);
-        if (department is null)
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
         {
-            return BadRequest(new { message = $"Department with ID {request.DepartmentId} does not exist." });
+            validationResult.AddToModelState(ModelState);
+            return ValidationProblem(ModelState);
         }
+
+        var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken);
 
         var staff = new Staff
         {
@@ -107,7 +115,7 @@ public class DoctorsController(IUnitOfWork unitOfWork) : ControllerBase
             FullName = $"Dr. {staff.FirstName} {staff.LastName}",
             Specialization = doctor.Specialization,
             LicenseNumber = doctor.LicenseNumber,
-            DepartmentName = department.DepartmentName,
+            DepartmentName = department!.DepartmentName,
             Email = staff.Email,
             Phone = staff.Phone
         };

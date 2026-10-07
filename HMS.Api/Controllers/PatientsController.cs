@@ -1,6 +1,8 @@
+using FluentValidation;
 using HMS.Api.Data.Entities;
 using HMS.Api.Data.Repositories;
 using HMS.Api.DTOs.Patients;
+using HMS.Api.Validators;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
@@ -75,8 +77,18 @@ public class PatientsController(IUnitOfWork unitOfWork) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<PatientResponseDto>> Create(CreatePatientRequestDto request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PatientResponseDto>> Create(
+        CreatePatientRequestDto request,
+        IValidator<CreatePatientRequestDto> validator,
+        CancellationToken cancellationToken)
     {
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            validationResult.AddToModelState(ModelState);
+            return ValidationProblem(ModelState);
+        }
+
         var patient = new Patient
         {
             FirstName = request.FirstName,

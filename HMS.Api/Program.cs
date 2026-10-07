@@ -2,6 +2,7 @@ using System.Diagnostics;
 using HMS.Api;
 using HMS.Api.Data;
 using HMS.Api.Data.Repositories;
+using FluentValidation;
 using HMS.Api.Filters;
 using HMS.Api.Middlewares;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ builder.Services.AddControllers()
 builder.Services.Configure<HospitalSettingsOptions>(
     builder.Configuration.GetSection(HospitalSettingsOptions.SectionName));
 
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 

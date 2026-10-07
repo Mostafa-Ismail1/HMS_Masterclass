@@ -1,7 +1,9 @@
+using FluentValidation;
 using HMS.Api.Data.Entities;
 using HMS.Api.Data.Repositories;
 using HMS.Api.DTOs.Departments;
 using HMS.Api.Filters;
+using HMS.Api.Validators;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
@@ -62,8 +64,18 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<DepartmentResponseDto>> Create(CreateDepartmentRequestDto request, CancellationToken cancellationToken)
+    public async Task<ActionResult<DepartmentResponseDto>> Create(
+        CreateDepartmentRequestDto request,
+        IValidator<CreateDepartmentRequestDto> validator,
+        CancellationToken cancellationToken)
     {
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            validationResult.AddToModelState(ModelState);
+            return ValidationProblem(ModelState);
+        }
+
         var department = new Department
         {
             DepartmentName = request.DepartmentName,

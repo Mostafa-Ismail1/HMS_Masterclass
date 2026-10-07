@@ -1,4 +1,4 @@
-    namespace HMS.Api.DTOs.Departments;
+namespace HMS.Api.DTOs.Departments;
 
 public class CreateDepartmentRequestDto
 {
