@@ -4,6 +4,7 @@ using HMS.Api.Data.Repositories;
 using HMS.Api.DTOs.Departments;
 using HMS.Api.Filters;
 using HMS.Api.Validators;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
@@ -114,13 +115,14 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var department = await unitOfWork.Departments.GetByIdWithStaffAsync(id, cancellationToken);
         if (department is null)
         {
-            return NotFound(new { message = $"Department with ID {id} was not found." });
+            return NotFound();
         }
 
         if (department.Staff.Count > 0)

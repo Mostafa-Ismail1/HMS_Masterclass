@@ -1,77 +1,79 @@
 @baseUrl = https://localhost:7219
 
 ############################################################
-# 1. Hospital Info & Emergency
+# 1. Authentication (JWT, Roles & Refresh)
 ############################################################
-GET {{baseUrl}}/api/hospital/info
+
+### Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
 
 ###
-GET {{baseUrl}}/emergency
+@adminToken = {{loginAdmin.response.body.$.token}}
+@adminRefreshToken = {{loginAdmin.response.body.$.refreshToken}}
+
+### Refresh Access Token
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{adminRefreshToken}}"
+}
+
+### Login as Doctor
+# @name loginDoctor
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "doctor",
+  "password": "Doc@123"
+}
+
+###
+@doctorToken = {{loginDoctor.response.body.$.token}}
 
 ############################################################
 # 2. Departments API
 ############################################################
-# GET All Departments (JSON)
+
+### GET All Departments
 GET {{baseUrl}}/api/departments
-Accept: application/json
 
-###
-# GET All Departments (XML Content Negotiation)
-GET {{baseUrl}}/api/departments
-Accept: application/xml
-
-###
-# GET Department By ID
-GET {{baseUrl}}/api/departments/1
-
-###
-# HEAD Department (Headers Only)
-HEAD {{baseUrl}}/api/departments/1
-
-###
-# OPTIONS Department (Allowed Verbs)
-OPTIONS {{baseUrl}}/api/departments
-
-###
-# POST Create Department
+### POST Create Department
 POST {{baseUrl}}/api/departments
 Content-Type: application/json
 
 {
-  "departmentName": "Pediatrics",
+  "departmentName": "Oncology",
   "location": "Building C, 2nd Floor"
 }
 
-###
-# PUT Update Department
-PUT {{baseUrl}}/api/departments/1
-Content-Type: application/json
+### DELETE Department (Unauthorized - 401)
+DELETE {{baseUrl}}/api/departments/999
 
-{
-  "departmentName": "General Surgery",
-  "location": "Building A, 3rd Floor"
-}
+### DELETE Department as Doctor (Forbidden - 403)
+DELETE {{baseUrl}}/api/departments/999
+Authorization: Bearer {{doctorToken}}
 
-###
-# DELETE Department
-DELETE {{baseUrl}}/api/departments/9
+### DELETE Department as Admin (Authorized)
+DELETE {{baseUrl}}/api/departments/999
+Authorization: Bearer {{adminToken}}
 
 ############################################################
 # 3. Doctors API
 ############################################################
-# GET All Doctors
+
+### GET All Doctors
 GET {{baseUrl}}/api/doctors
 
-###
-# GET Doctors filtered by Specialization
-GET {{baseUrl}}/api/doctors?specialization=Cardiology
-
-###
-# GET Doctor By ID
-GET {{baseUrl}}/api/doctors/1
-
-###
-# POST Create Doctor (with linked Staff record)
+### POST Create Doctor
 POST {{baseUrl}}/api/doctors
 Content-Type: application/json
 
@@ -89,15 +91,11 @@ Content-Type: application/json
 ############################################################
 # 4. Patients API
 ############################################################
-# GET All Patients (Pagination & Filtering)
+
+### GET Patients (Paged)
 GET {{baseUrl}}/api/patients?page=1&pageSize=10
 
-###
-# GET Patient By ID
-GET {{baseUrl}}/api/patients/1
-
-###
-# POST Create Patient
+### POST Create Patient
 POST {{baseUrl}}/api/patients
 Content-Type: application/json
 
@@ -111,106 +109,3 @@ Content-Type: application/json
   "address": "15 Nile St, Cairo",
   "bloodType": "A+"
 }
-
-############################################################
-# 5. Error Handling Tests (RFC 9457 Problem Details)
-############################################################
-
-### GET Non-existent Department (Returns RFC 9457 Problem Details 404)
-GET {{baseUrl}}/api/departments/999
-
-### POST Invalid Payload (Returns RFC 9457 Validation Problem Details 400)
-POST {{baseUrl}}/api/departments
-Content-Type: application/json
-
-{
-  "departmentName": [1, 2, 3]
-}
-
-############################################################
-# 6. Module 18: FluentValidation Tests
-############################################################
-
-### [Test 1: Empty Department Name - Should Return 400]
-POST {{baseUrl}}/api/departments
-Content-Type: application/json
-
-{
-  "departmentName": ""
-}
-
-### [Test 2: Name Too Short (< 3 characters) - Should Return 400]
-POST {{baseUrl}}/api/departments
-Content-Type: application/json
-
-{
-  "departmentName": "IC"
-}
-
-### [Test 3: Enterprise Killer Feature - Duplicate Name in DB - Should Return 400]
-# "Cardiology" is already in HMS_DB! FluentValidation checks the DB via MustAsync!
-POST {{baseUrl}}/api/departments
-Content-Type: application/json
-
-{
-  "departmentName": "Surgery",
-  "location": "Building A"
-}
-
-### [Test 4: Valid Unique Department - Should Return 201 Created]
-POST {{baseUrl}}/api/departments
-Content-Type: application/json
-
-{
-  "departmentName": "Oncology",
-  "location": "Building D, 1st Floor"
-}
-
-### [Test 5: Doctor Validation - Invalid Egyptian Phone & Low Salary < 6000 EGP]
-# Should return 400 with both Phone and Salary errors!
-POST {{baseUrl}}/api/doctors
-Content-Type: application/json
-
-{
-  "firstName": "Hany",
-  "lastName": "Shaker",
-  "email": "hany.shaker@hospital.com",
-  "phone": "12345",
-  "departmentId": 1,
-  "specialization": "Cardiology",
-  "licenseNumber": "MED-2026-1111",
-  "salary": 3000.00
-}
-
-### [Test 6: Doctor Validation - Department Does Not Exist in DB]
-# Department 999 does not exist! Should return 400 via MustAsync check!
-POST {{baseUrl}}/api/doctors
-Content-Type: application/json
-
-{
-  "firstName": "Hany",
-  "lastName": "Shaker",
-  "email": "hany.shaker@hospital.com",
-  "phone": "01011112222",
-  "departmentId": 999,
-  "specialization": "Cardiology",
-  "licenseNumber": "MED-2026-1111",
-  "salary": 15000.00
-}
-
-### [Test 7: Patient Validation - Future DOB & Invalid Blood Type]
-# DOB is in year 2099 and BloodType "XYZ" is invalid! Should return 400!
-POST {{baseUrl}}/api/patients
-Content-Type: application/json
-
-{
-  "firstName": "Sami",
-  "lastName": "Youssef",
-  "dob": "2099-01-01",
-  "phone": "01122334455",
-  "gender": "M",
-  "email": "sami@example.com",
-  "bloodType": "XYZ"
-}
-
-
