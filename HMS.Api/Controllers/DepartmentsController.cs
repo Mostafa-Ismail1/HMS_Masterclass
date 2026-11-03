@@ -14,7 +14,11 @@ namespace HMS.Api.Controllers;
 [Route("api/[controller]")]
 public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
 {
+    /// <summary>
+    /// Retrieves all hospital departments along with their staff count.
+    /// </summary>
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<DepartmentResponseDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<DepartmentResponseDto>>> GetAll(CancellationToken cancellationToken)
     {
         var departments = await unitOfWork.Departments.GetAllWithStaffAsync(cancellationToken);
@@ -30,7 +34,14 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
         return Ok(dtos);
     }
 
+    /// <summary>
+    /// Retrieves details of a specific department by its unique ID.
+    /// </summary>
+    /// <param name="id">The unique identifier of the department.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
     [HttpGet("{id:int}", Name = nameof(GetDepartmentById))]
+    [ProducesResponseType(typeof(DepartmentResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DepartmentResponseDto>> GetDepartmentById(int id, CancellationToken cancellationToken)
     {
         var department = await unitOfWork.Departments.GetByIdWithStaffAsync(id, cancellationToken);
@@ -64,7 +75,15 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
         return Ok();
     }
 
+    /// <summary>
+    /// Creates a new hospital department.
+    /// </summary>
+    /// <param name="request">The department details to create.</param>
+    /// <param name="validator">Validator instance for request validation.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
     [HttpPost]
+    [ProducesResponseType(typeof(DepartmentResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<DepartmentResponseDto>> Create(
         CreateDepartmentRequestDto request,
         IValidator<CreateDepartmentRequestDto> validator,
@@ -115,8 +134,18 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Deletes a hospital department (Admin role required).
+    /// </summary>
+    /// <param name="id">The department ID to delete.</param>
+    /// <param name="cancellationToken">Cancellation token for async operations.</param>
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var department = await unitOfWork.Departments.GetByIdWithStaffAsync(id, cancellationToken);
