@@ -6,14 +6,19 @@ using HMS.Api.Filters;
 using HMS.Api.Validators;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HMS.Api.Controllers;
 
+[EnableRateLimiting("fixed-window")]
 [ServiceFilter(typeof(LogActionActivityFilter))]
 [ApiController]
 [Route("api/[controller]")]
-public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
+public class DepartmentsController(IUnitOfWork unitOfWork, IMemoryCache memoryCache) : ControllerBase
 {
+    private const string DepartmentsCacheKey = "departments-all";
+
     /// <summary>
     /// Retrieves all hospital departments along with their staff count.
     /// </summary>
@@ -21,14 +26,20 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<DepartmentResponseDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<DepartmentResponseDto>>> GetAll(CancellationToken cancellationToken)
     {
-        var departments = await unitOfWork.Departments.GetAllWithStaffAsync(cancellationToken);
-
-        var dtos = departments.Select(d => new DepartmentResponseDto
+        var dtos = await memoryCache.GetOrCreateAsync(DepartmentsCacheKey, async entry =>
         {
-            DepartmentId = d.DepartmentId,
-            DepartmentName = d.DepartmentName,
-            Location = d.Location,
-            TotalStaffCount = d.Staff.Count
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            entry.SlidingExpiration = TimeSpan.FromMinutes(1);
+
+            var departments = await unitOfWork.Departments.GetAllWithStaffAsync(cancellationToken);
+
+            return departments.Select(d => new DepartmentResponseDto
+            {
+                DepartmentId = d.DepartmentId,
+                DepartmentName = d.DepartmentName,
+                Location = d.Location,
+                TotalStaffCount = d.Staff.Count
+            }).ToList();
         });
 
         return Ok(dtos);
@@ -105,6 +116,8 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
         await unitOfWork.Departments.AddAsync(department, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        memoryCache.Remove(DepartmentsCacheKey);
+
         var responseDto = new DepartmentResponseDto
         {
             DepartmentId = department.DepartmentId,
@@ -130,6 +143,8 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
 
         unitOfWork.Departments.Update(department);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        memoryCache.Remove(DepartmentsCacheKey);
 
         return NoContent();
     }
@@ -161,6 +176,8 @@ public class DepartmentsController(IUnitOfWork unitOfWork) : ControllerBase
 
         unitOfWork.Departments.Delete(department);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        memoryCache.Remove(DepartmentsCacheKey);
 
         return NoContent();
     }

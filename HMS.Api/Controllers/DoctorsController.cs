@@ -4,13 +4,19 @@ using HMS.Api.Data.Repositories;
 using HMS.Api.DTOs.Doctors;
 using HMS.Api.Validators;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace HMS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class DoctorsController(IUnitOfWork unitOfWork) : ControllerBase
+public class DoctorsController(
+    IUnitOfWork unitOfWork,
+    HybridCache hybridCache,
+    IOutputCacheStore outputCacheStore) : ControllerBase
 {
+    [OutputCache(Duration = 60, Tags = ["doctors"])]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<DoctorResponseDto>>> GetAll(
         [FromQuery] string? specialization,
@@ -35,22 +41,36 @@ public class DoctorsController(IUnitOfWork unitOfWork) : ControllerBase
     [HttpGet("{id:int}", Name = nameof(GetDoctorById))]
     public async Task<ActionResult<DoctorResponseDto>> GetDoctorById(int id, CancellationToken cancellationToken)
     {
-        var doctor = await unitOfWork.Doctors.GetByIdWithDetailsAsync(id, cancellationToken);
-        if (doctor is null)
+        var cacheKey = $"doctor-{id}";
+
+        var responseDto = await hybridCache.GetOrCreateAsync(
+            cacheKey,
+            async token =>
+            {
+                var doctor = await unitOfWork.Doctors.GetByIdWithDetailsAsync(id, token);
+                if (doctor is null)
+                {
+                    return null;
+                }
+
+                return new DoctorResponseDto
+                {
+                    DoctorId = doctor.DoctorId,
+                    FullName = $"Dr. {doctor.DoctorNavigation.FirstName} {doctor.DoctorNavigation.LastName}",
+                    Specialization = doctor.Specialization,
+                    LicenseNumber = doctor.LicenseNumber,
+                    DepartmentName = doctor.DoctorNavigation.Department.DepartmentName,
+                    Email = doctor.DoctorNavigation.Email,
+                    Phone = doctor.DoctorNavigation.Phone
+                };
+            },
+            cancellationToken: cancellationToken
+        );
+
+        if (responseDto is null)
         {
             return NotFound(new { message = $"Doctor with ID {id} was not found." });
         }
-
-        var responseDto = new DoctorResponseDto
-        {
-            DoctorId = doctor.DoctorId,
-            FullName = $"Dr. {doctor.DoctorNavigation.FirstName} {doctor.DoctorNavigation.LastName}",
-            Specialization = doctor.Specialization,
-            LicenseNumber = doctor.LicenseNumber,
-            DepartmentName = doctor.DoctorNavigation.Department.DepartmentName,
-            Email = doctor.DoctorNavigation.Email,
-            Phone = doctor.DoctorNavigation.Phone
-        };
 
         return Ok(responseDto);
     }
@@ -109,6 +129,8 @@ public class DoctorsController(IUnitOfWork unitOfWork) : ControllerBase
         await unitOfWork.Doctors.AddAsync(doctor, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await outputCacheStore.EvictByTagAsync("doctors", cancellationToken);
+
         var responseDto = new DoctorResponseDto
         {
             DoctorId = doctor.DoctorId,
@@ -139,6 +161,9 @@ public class DoctorsController(IUnitOfWork unitOfWork) : ControllerBase
         unitOfWork.Doctors.Update(doctor);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await hybridCache.RemoveAsync($"doctor-{id}", cancellationToken);
+        await outputCacheStore.EvictByTagAsync("doctors", cancellationToken);
+
         return NoContent();
     }
 
@@ -159,6 +184,9 @@ public class DoctorsController(IUnitOfWork unitOfWork) : ControllerBase
         unitOfWork.Doctors.Delete(doctor);
         unitOfWork.Staff.Delete(doctor.DoctorNavigation);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await hybridCache.RemoveAsync($"doctor-{id}", cancellationToken);
+        await outputCacheStore.EvictByTagAsync("doctors", cancellationToken);
 
         return NoContent();
     }

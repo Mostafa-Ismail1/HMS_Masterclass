@@ -43,7 +43,7 @@ Content-Type: application/json
 # 2. Departments API
 ############################################################
 
-### GET All Departments
+### GET All Departments (Rate Limited: 5 requests / 30s)
 GET {{baseUrl}}/api/departments
 
 ### POST Create Department
@@ -70,8 +70,12 @@ Authorization: Bearer {{adminToken}}
 # 3. Doctors API
 ############################################################
 
-### GET All Doctors
+### GET All Doctors (Compressed with Brotli / Gzip)
 GET {{baseUrl}}/api/doctors
+Accept-Encoding: gzip, br
+
+### GET Doctor By ID (Cached with HybridCache)
+GET {{baseUrl}}/api/doctors/1
 
 ### POST Create Doctor
 POST {{baseUrl}}/api/doctors
@@ -108,4 +112,12 @@ Content-Type: application/json
   "email": "youssef.ali@example.com",
   "address": "15 Nile St, Cairo",
   "bloodType": "A+"
+}
+#####
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "departmentName": "Radiology",
+  "location": "Building F, Ground Floor"
 }
