@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using HMS.Api;
+using HMS.Api.BackgroundServices;
 using HMS.Api.Data;
 using HMS.Api.Data.Repositories;
 using FluentValidation;
@@ -135,6 +136,7 @@ builder.Services.AddScoped<IDoctorRepository, DoctorRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<LogActionActivityFilter>();
+builder.Services.AddHostedService<HospitalMetricsBackgroundService>();
 
 builder.Services.AddCors(options =>
 {

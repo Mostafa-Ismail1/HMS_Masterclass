@@ -11,7 +11,7 @@ public class LogActionActivityFilter(ILogger<LogActionActivityFilter> logger) : 
         var controllerName = context.Controller.GetType().Name;
         var actionName = context.ActionDescriptor.DisplayName;
 
-        logger.LogInformation(" [Audit] Starting: {Controller} -> {Action} with {Count} argument(s).",
+        logger.LogInformation("[Audit] Starting: {Controller} -> {Action} with {Count} argument(s).",
             controllerName, actionName, context.ActionArguments.Count);
 
         var stopwatch = Stopwatch.StartNew();
@@ -27,7 +27,7 @@ public class LogActionActivityFilter(ILogger<LogActionActivityFilter> logger) : 
             _ => 200
         };
 
-        logger.LogInformation("⬅️ [Audit] Completed: {Controller} in {Elapsed} ms | Status: {StatusCode}",
+        logger.LogInformation("[Audit] Completed: {Controller} in {Elapsed} ms | Status: {StatusCode}",
             controllerName, stopwatch.ElapsedMilliseconds, statusCode);
     }
 }

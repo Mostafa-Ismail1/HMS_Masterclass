@@ -1,10 +1,6 @@
 @baseUrl = https://localhost:7219
 
-############################################################
-# 1. Authentication (JWT, Roles & Refresh)
-############################################################
-
-### Login as Admin
+### 1. Authentication
 # @name loginAdmin
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
@@ -18,7 +14,7 @@ Content-Type: application/json
 @adminToken = {{loginAdmin.response.body.$.token}}
 @adminRefreshToken = {{loginAdmin.response.body.$.refreshToken}}
 
-### Refresh Access Token
+### Refresh Token
 POST {{baseUrl}}/api/auth/refresh
 Content-Type: application/json
 
@@ -26,7 +22,7 @@ Content-Type: application/json
   "refreshToken": "{{adminRefreshToken}}"
 }
 
-### Login as Doctor
+### Login Doctor
 # @name loginDoctor
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
@@ -39,45 +35,30 @@ Content-Type: application/json
 ###
 @doctorToken = {{loginDoctor.response.body.$.token}}
 
-############################################################
-# 2. Departments API
-############################################################
-
-### GET All Departments (Rate Limited: 5 requests / 30s)
+### 2. Departments
 GET {{baseUrl}}/api/departments
 
-### POST Create Department
+### Create Department
 POST {{baseUrl}}/api/departments
 Content-Type: application/json
 
 {
-  "departmentName": "Oncology",
-  "location": "Building C, 2nd Floor"
+  "departmentName": "Neurology",
+  "location": "Building D, 3rd Floor"
 }
 
-### DELETE Department (Unauthorized - 401)
-DELETE {{baseUrl}}/api/departments/999
-
-### DELETE Department as Doctor (Forbidden - 403)
-DELETE {{baseUrl}}/api/departments/999
-Authorization: Bearer {{doctorToken}}
-
-### DELETE Department as Admin (Authorized)
+### Delete Department (Admin)
 DELETE {{baseUrl}}/api/departments/999
 Authorization: Bearer {{adminToken}}
 
-############################################################
-# 3. Doctors API
-############################################################
-
-### GET All Doctors (Compressed with Brotli / Gzip)
+### 3. Doctors
 GET {{baseUrl}}/api/doctors
 Accept-Encoding: gzip, br
 
-### GET Doctor By ID (Cached with HybridCache)
+### Get Doctor By ID
 GET {{baseUrl}}/api/doctors/1
 
-### POST Create Doctor
+### Create Doctor
 POST {{baseUrl}}/api/doctors
 Content-Type: application/json
 
@@ -92,14 +73,10 @@ Content-Type: application/json
   "salary": 18000.00
 }
 
-############################################################
-# 4. Patients API
-############################################################
-
-### GET Patients (Paged)
+### 4. Patients
 GET {{baseUrl}}/api/patients?page=1&pageSize=10
 
-### POST Create Patient
+### Create Patient
 POST {{baseUrl}}/api/patients
 Content-Type: application/json
 
@@ -113,21 +90,9 @@ Content-Type: application/json
   "address": "15 Nile St, Cairo",
   "bloodType": "A+"
 }
-#####
-POST {{baseUrl}}/api/departments
-Content-Type: application/json
 
-{
-  "departmentName": "Radiology",
-  "location": "Building F, Ground Floor"
-}
-
-############################################################
-# 5. Health Checks (Observability)
-############################################################
-
-### Basic Health Check (Liveness Probe)
+### 5. Health Checks
 GET {{baseUrl}}/health
 
-### Detailed Health Check (Readiness Probe with DB check)
+### Detailed Health Check
 GET {{baseUrl}}/health/ready
