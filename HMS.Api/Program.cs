@@ -12,15 +12,27 @@ using HMS.Api.Filters;
 using HMS.Api.Middlewares;
 using HMS.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.File("Logs/hms-.txt", rollingInterval: RollingInterval.Day);
+});
 
 builder.Services.AddControllers()
     .AddXmlSerializerFormatters();
@@ -110,6 +122,12 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddDbContext<HmsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<HmsDbContext>(
+        name: "sql_server_database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["db", "sql", "ready"]);
+
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IPatientRepository, PatientRepository>();
@@ -175,6 +193,7 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseResponseCompression();
+app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {
@@ -200,6 +219,31 @@ app.Map("/emergency", emergencyApp =>
     {
         await context.Response.WriteAsync("Emergency Department: Fast-track pipeline active!");
     });
+});
+
+app.MapHealthChecks("/health");
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var response = new
+        {
+            status = report.Status.ToString(),
+            totalDuration = $"{report.TotalDuration.TotalMilliseconds:0.##} ms",
+            entries = report.Entries.Select(e => new
+            {
+                component = e.Key,
+                status = e.Value.Status.ToString(),
+                duration = $"{e.Value.Duration.TotalMilliseconds:0.##} ms",
+                description = e.Value.Description,
+                exception = e.Value.Exception?.Message
+            })
+        };
+        await context.Response.WriteAsJsonAsync(response);
+    }
 });
 
 app.MapControllers();

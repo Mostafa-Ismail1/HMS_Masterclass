@@ -121,3 +121,13 @@ Content-Type: application/json
   "departmentName": "Radiology",
   "location": "Building F, Ground Floor"
 }
+
+############################################################
+# 5. Health Checks (Observability)
+############################################################
+
+### Basic Health Check (Liveness Probe)
+GET {{baseUrl}}/health
+
+### Detailed Health Check (Readiness Probe with DB check)
+GET {{baseUrl}}/health/ready
