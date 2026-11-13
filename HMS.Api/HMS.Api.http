@@ -1,7 +1,6 @@
 @baseUrl = https://localhost:7219
 
-### 1. Authentication
-# @name loginAdmin
+### Auth
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
@@ -10,145 +9,11 @@ Content-Type: application/json
   "password": "Admin@123"
 }
 
-###
-@adminToken = {{loginAdmin.response.body.$.token}}
-@adminRefreshToken = {{loginAdmin.response.body.$.refreshToken}}
-
-### Refresh Token
-POST {{baseUrl}}/api/auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "{{adminRefreshToken}}"
-}
-
-### Login Doctor
-# @name loginDoctor
-POST {{baseUrl}}/api/auth/login
-Content-Type: application/json
-
-{
-  "username": "doctor",
-  "password": "Doc@123"
-}
+### Patients
+GET {{baseUrl}}/api/v1/patients?page=1&pageSize=10
 
 ###
-@doctorToken = {{loginDoctor.response.body.$.token}}
-
-### 2. Departments
-GET {{baseUrl}}/api/departments
-
-### Create Department
-POST {{baseUrl}}/api/departments
-Content-Type: application/json
-
-{
-  "departmentName": "Neurology",
-  "location": "Building D, 3rd Floor"
-}
-
-### Delete Department (Admin)
-DELETE {{baseUrl}}/api/departments/999
-Authorization: Bearer {{adminToken}}
-
-### 3. Appointments (Clean Architecture & CQRS)
-
-### Test 1: Get All Appointments
-GET {{baseUrl}}/api/appointments
-
-### Test 2: ValidationBehavior Gate Rejection (Invalid Patient ID = 0)
-POST {{baseUrl}}/api/appointments
-Content-Type: application/json
-
-{
-  "patientId": 0,
-  "doctorId": 1,
-  "appointmentDate": "2027-05-15T10:00:00Z",
-  "reason": "Routine Checkup"
-}
-
-### Test 3: Domain Rule Rejection (Past Date = 2020)
-POST {{baseUrl}}/api/appointments
-Content-Type: application/json
-
-{
-  "patientId": 1,
-  "doctorId": 1,
-  "appointmentDate": "2020-01-01T10:00:00Z",
-  "reason": "Routine Checkup"
-}
-
-### Test 4: Success (Valid Future Date -> Persisted in SQL Server)
-POST {{baseUrl}}/api/appointments
-Content-Type: application/json
-
-{
-  "patientId": 1,
-  "doctorId": 1,
-  "appointmentDate": "2027-05-15T10:00:00Z",
-  "reason": "Routine Checkup"
-}
-
-### Test 5: Reschedule Appointment to New Date
-PUT {{baseUrl}}/api/appointments/1/reschedule
-Content-Type: application/json
-
-{
-  "newAppointmentDate": "2027-06-20T14:00:00Z"
-}
-
-### Test 6: Cancel Appointment (Success)
-PUT {{baseUrl}}/api/appointments/1/cancel
-
-### Test 7: Cancel Again (Failure: Already Cancelled)
-PUT {{baseUrl}}/api/appointments/1/cancel
-
-### 4. Doctors (Clean Architecture & CQRS)
-GET {{baseUrl}}/api/doctors
-
-### Create Doctor (Clean Architecture & CQRS)
-POST {{baseUrl}}/api/doctors
-Content-Type: application/json
-
-{
-  "doctorId": 3,
-  "specialization": "Cardiology",
-  "licenseNumber": "MED-2026-9901"
-}
-
-### 4. Patients (Clean Architecture & CQRS)
-
-### Patient Test 1: Get All Patients (Paginated)
-GET {{baseUrl}}/api/patients?page=1&pageSize=10
-
-### Patient Test 2: Validation Gate Rejection (Invalid Phone Format)
-POST {{baseUrl}}/api/patients
-Content-Type: application/json
-
-{
-  "firstName": "Ahmed",
-  "lastName": "Hassan",
-  "dob": "1990-05-10",
-  "phone": "12345",
-  "gender": "M",
-  "email": "ahmed@example.com"
-}
-
-### Patient Test 3: Domain Rule Rejection (DOB in Future = 2035)
-POST {{baseUrl}}/api/patients
-Content-Type: application/json
-
-{
-  "firstName": "Ahmed",
-  "lastName": "Hassan",
-  "dob": "2035-05-10",
-  "phone": "01011112222",
-  "gender": "M",
-  "email": "ahmed@example.com"
-}
-
-### Patient Test 4: Success Registration (Valid Data -> SQL Server clinical.Patients)
-POST {{baseUrl}}/api/patients
+POST {{baseUrl}}/api/v1/patients
 Content-Type: application/json
 
 {
@@ -157,28 +22,52 @@ Content-Type: application/json
   "dob": "1995-04-12",
   "phone": "01234567890",
   "gender": "M",
-  "email": "youssef.ali@example.com",
-  "address": "15 Nile St, Cairo",
-  "bloodType": "A+"
+  "email": "youssef.ali@example.com"
 }
 
-### 5. Medications & Prescriptions
-GET {{baseUrl}}/api/medications
+### Appointments
+GET {{baseUrl}}/api/v1/appointments
 
-### Create Medication
-POST {{baseUrl}}/api/medications
+###
+POST {{baseUrl}}/api/v1/appointments
 Content-Type: application/json
 
 {
-  "name": "Amoxicillin 500mg",
-  "manufacturer": "PharmaCorp",
-  "unitPrice": 45.50
+  "patientId": 1,
+  "doctorId": 1,
+  "appointmentDate": "2027-05-15T10:00:00Z",
+  "reason": "Routine Checkup"
 }
 
-### Get Prescriptions
-GET {{baseUrl}}/api/prescriptions
+### Departments
+GET {{baseUrl}}/api/departments
 
-### Issue Prescription
+###
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "departmentName": "Cardiology",
+  "location": "Building A"
+}
+
+### Doctors
+GET {{baseUrl}}/api/doctors
+
+###
+POST {{baseUrl}}/api/doctors
+Content-Type: application/json
+
+{
+  "doctorId": 1,
+  "specialization": "Cardiology",
+  "licenseNumber": "DOC-101"
+}
+
+### Medications
+GET {{baseUrl}}/api/medications
+
+### Prescriptions
 POST {{baseUrl}}/api/prescriptions
 Content-Type: application/json
 
@@ -190,76 +79,23 @@ Content-Type: application/json
   "items": [
     {
       "medicationId": 1,
-      "dosage": "1 capsule 3 times daily",
+      "dosage": "1 pill daily",
       "duration": "7 days"
     }
   ]
 }
 
-### 6. Lab Orders & Tests
+### Lab Orders
 GET {{baseUrl}}/api/laborders
 
-### Get Lab Tests Catalog
-GET {{baseUrl}}/api/laborders/tests
-
-### Create Lab Order
-POST {{baseUrl}}/api/laborders
-Content-Type: application/json
-
-{
-  "patientId": 1,
-  "doctorId": 1,
-  "labTestId": 1,
-  "orderDate": "2026-11-13"
-}
-
-### 7. Admissions & Rooms
+### Admissions
 GET {{baseUrl}}/api/admissions
 
-### Get Rooms
-GET {{baseUrl}}/api/admissions/rooms
-
-### Admit Patient
-POST {{baseUrl}}/api/admissions
-Content-Type: application/json
-
-{
-  "patientId": 1,
-  "roomId": 1,
-  "admittingDoctorId": 1,
-  "admissionDate": "2026-11-13T10:00:00Z"
-}
-
-### 8. Billing & Insurance
+### Invoices
 GET {{baseUrl}}/api/invoices
 
-### Create Invoice
-POST {{baseUrl}}/api/invoices
-Content-Type: application/json
-
-{
-  "patientId": 1,
-  "admissionId": null,
-  "issueDate": "2026-11-13",
-  "items": [
-    {
-      "description": "Consultation Fee",
-      "amount": 250.00
-    }
-  ]
-}
-
-### Get Insurance Providers
-GET {{baseUrl}}/api/insurances/providers
-
-### 9. Staff & Nurses
+### Staff
 GET {{baseUrl}}/api/staff
 
-### Get Nurses
-GET {{baseUrl}}/api/staff/nurses
-
-### 10. Health Checks
+### Health
 GET {{baseUrl}}/health
-
-### Detailed Health Check
-GET {{baseUrl}}/health/ready

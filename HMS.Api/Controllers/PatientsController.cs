@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using HMS.Application.Patients.Commands.RegisterPatient;
 using HMS.Application.Patients.Queries.GetPatients;
 using MediatR;
@@ -5,7 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
+[Route("api/v{version:apiVersion}/[controller]")]
 [Route("api/[controller]")]
 public class PatientsController(ISender sender) : ControllerBase
 {

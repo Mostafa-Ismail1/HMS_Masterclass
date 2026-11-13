@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
+using Asp.Versioning;
 using HMS.Api;
 using HMS.Api.BackgroundServices;
 using HMS.Application;
@@ -38,6 +39,24 @@ builder.Host.UseSerilog((context, configuration) =>
 
 builder.Services.AddControllers()
     .AddXmlSerializerFormatters();
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new UrlSegmentApiVersionReader(),
+        new QueryStringApiVersionReader("api-version"),
+        new HeaderApiVersionReader("X-Version")
+    );
+})
+.AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
 builder.Services.Configure<HospitalSettingsOptions>(
     builder.Configuration.GetSection(HospitalSettingsOptions.SectionName));
 
