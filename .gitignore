@@ -483,8 +483,7 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# Local documentation and roadmaps (do not push to GitHub)
-README.md
+# Local internal roadmap (do not push to GitHub)
 ROADMAP.md
 
 # Log files and runtime outputs
