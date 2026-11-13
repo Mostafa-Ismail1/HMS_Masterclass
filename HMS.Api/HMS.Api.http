@@ -51,32 +51,103 @@ Content-Type: application/json
 DELETE {{baseUrl}}/api/departments/999
 Authorization: Bearer {{adminToken}}
 
-### 3. Doctors
+### 3. Appointments (Clean Architecture & CQRS)
+
+### Test 1: Get All Appointments
+GET {{baseUrl}}/api/appointments
+
+### Test 2: ValidationBehavior Gate Rejection (Invalid Patient ID = 0)
+POST {{baseUrl}}/api/appointments
+Content-Type: application/json
+
+{
+  "patientId": 0,
+  "doctorId": 1,
+  "appointmentDate": "2027-05-15T10:00:00Z",
+  "reason": "Routine Checkup"
+}
+
+### Test 3: Domain Rule Rejection (Past Date = 2020)
+POST {{baseUrl}}/api/appointments
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "doctorId": 1,
+  "appointmentDate": "2020-01-01T10:00:00Z",
+  "reason": "Routine Checkup"
+}
+
+### Test 4: Success (Valid Future Date -> Persisted in SQL Server)
+POST {{baseUrl}}/api/appointments
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "doctorId": 1,
+  "appointmentDate": "2027-05-15T10:00:00Z",
+  "reason": "Routine Checkup"
+}
+
+### Test 5: Reschedule Appointment to New Date
+PUT {{baseUrl}}/api/appointments/1/reschedule
+Content-Type: application/json
+
+{
+  "newAppointmentDate": "2027-06-20T14:00:00Z"
+}
+
+### Test 6: Cancel Appointment (Success)
+PUT {{baseUrl}}/api/appointments/1/cancel
+
+### Test 7: Cancel Again (Failure: Already Cancelled)
+PUT {{baseUrl}}/api/appointments/1/cancel
+
+### 4. Doctors (Clean Architecture & CQRS)
 GET {{baseUrl}}/api/doctors
-Accept-Encoding: gzip, br
 
-### Get Doctor By ID
-GET {{baseUrl}}/api/doctors/1
-
-### Create Doctor
+### Create Doctor (Clean Architecture & CQRS)
 POST {{baseUrl}}/api/doctors
 Content-Type: application/json
 
 {
-  "firstName": "Tarek",
-  "lastName": "Ibrahim",
-  "email": "tarek.ibrahim@hospital.com",
-  "phone": "01012345678",
-  "departmentId": 1,
+  "doctorId": 3,
   "specialization": "Cardiology",
-  "licenseNumber": "MED-2026-9901",
-  "salary": 18000.00
+  "licenseNumber": "MED-2026-9901"
 }
 
-### 4. Patients
+### 4. Patients (Clean Architecture & CQRS)
+
+### Patient Test 1: Get All Patients (Paginated)
 GET {{baseUrl}}/api/patients?page=1&pageSize=10
 
-### Create Patient
+### Patient Test 2: Validation Gate Rejection (Invalid Phone Format)
+POST {{baseUrl}}/api/patients
+Content-Type: application/json
+
+{
+  "firstName": "Ahmed",
+  "lastName": "Hassan",
+  "dob": "1990-05-10",
+  "phone": "12345",
+  "gender": "M",
+  "email": "ahmed@example.com"
+}
+
+### Patient Test 3: Domain Rule Rejection (DOB in Future = 2035)
+POST {{baseUrl}}/api/patients
+Content-Type: application/json
+
+{
+  "firstName": "Ahmed",
+  "lastName": "Hassan",
+  "dob": "2035-05-10",
+  "phone": "01011112222",
+  "gender": "M",
+  "email": "ahmed@example.com"
+}
+
+### Patient Test 4: Success Registration (Valid Data -> SQL Server clinical.Patients)
 POST {{baseUrl}}/api/patients
 Content-Type: application/json
 
@@ -91,7 +162,103 @@ Content-Type: application/json
   "bloodType": "A+"
 }
 
-### 5. Health Checks
+### 5. Medications & Prescriptions
+GET {{baseUrl}}/api/medications
+
+### Create Medication
+POST {{baseUrl}}/api/medications
+Content-Type: application/json
+
+{
+  "name": "Amoxicillin 500mg",
+  "manufacturer": "PharmaCorp",
+  "unitPrice": 45.50
+}
+
+### Get Prescriptions
+GET {{baseUrl}}/api/prescriptions
+
+### Issue Prescription
+POST {{baseUrl}}/api/prescriptions
+Content-Type: application/json
+
+{
+  "appointmentId": 1,
+  "doctorId": 1,
+  "patientId": 1,
+  "datePrescribed": "2026-11-13",
+  "items": [
+    {
+      "medicationId": 1,
+      "dosage": "1 capsule 3 times daily",
+      "duration": "7 days"
+    }
+  ]
+}
+
+### 6. Lab Orders & Tests
+GET {{baseUrl}}/api/laborders
+
+### Get Lab Tests Catalog
+GET {{baseUrl}}/api/laborders/tests
+
+### Create Lab Order
+POST {{baseUrl}}/api/laborders
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "doctorId": 1,
+  "labTestId": 1,
+  "orderDate": "2026-11-13"
+}
+
+### 7. Admissions & Rooms
+GET {{baseUrl}}/api/admissions
+
+### Get Rooms
+GET {{baseUrl}}/api/admissions/rooms
+
+### Admit Patient
+POST {{baseUrl}}/api/admissions
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "roomId": 1,
+  "admittingDoctorId": 1,
+  "admissionDate": "2026-11-13T10:00:00Z"
+}
+
+### 8. Billing & Insurance
+GET {{baseUrl}}/api/invoices
+
+### Create Invoice
+POST {{baseUrl}}/api/invoices
+Content-Type: application/json
+
+{
+  "patientId": 1,
+  "admissionId": null,
+  "issueDate": "2026-11-13",
+  "items": [
+    {
+      "description": "Consultation Fee",
+      "amount": 250.00
+    }
+  ]
+}
+
+### Get Insurance Providers
+GET {{baseUrl}}/api/insurances/providers
+
+### 9. Staff & Nurses
+GET {{baseUrl}}/api/staff
+
+### Get Nurses
+GET {{baseUrl}}/api/staff/nurses
+
+### 10. Health Checks
 GET {{baseUrl}}/health
 
 ### Detailed Health Check

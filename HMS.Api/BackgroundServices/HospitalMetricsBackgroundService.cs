@@ -1,4 +1,4 @@
-using HMS.Api.Data.Repositories;
+using HMS.Application.Common.Interfaces;
 
 namespace HMS.Api.BackgroundServices;
 
@@ -37,18 +37,16 @@ public class HospitalMetricsBackgroundService(
         try
         {
             using var scope = serviceScopeFactory.CreateScope();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var departmentRepository = scope.ServiceProvider.GetRequiredService<IDepartmentRepository>();
+            var staffRepository = scope.ServiceProvider.GetRequiredService<IStaffRepository>();
 
-            var departments = await unitOfWork.Departments.GetAllWithStaffAsync(cancellationToken);
-            var departmentList = departments.ToList();
-
-            var totalDepartments = departmentList.Count;
-            var totalStaff = departmentList.Sum(d => d.Staff.Count);
+            var departments = await departmentRepository.GetAllAsync(cancellationToken);
+            var staff = await staffRepository.GetAllStaffAsync(cancellationToken);
 
             logger.LogInformation(
                 "[Hospital Metrics] Departments: {TotalDepartments} | Staff: {TotalStaff} | Time: {Timestamp:HH:mm:ss}",
-                totalDepartments,
-                totalStaff,
+                departments.Count,
+                staff.Count,
                 DateTime.Now);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)

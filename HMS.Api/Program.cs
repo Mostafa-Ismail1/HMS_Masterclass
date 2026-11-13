@@ -6,8 +6,9 @@ using System.Text;
 using System.Threading.RateLimiting;
 using HMS.Api;
 using HMS.Api.BackgroundServices;
-using HMS.Api.Data;
-using HMS.Api.Data.Repositories;
+using HMS.Application;
+using HMS.Infrastructure;
+using HMS.Infrastructure.Persistence;
 using FluentValidation;
 using HMS.Api.Filters;
 using HMS.Api.Middlewares;
@@ -120,20 +121,15 @@ builder.Services.AddAuthorization(options =>
               .RequireClaim("Department", "Cardiology"));
 });
 
-builder.Services.AddDbContext<HmsDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<HmsDbContext>(
+    .AddDbContextCheck<ApplicationDbContext>(
         name: "sql_server_database",
         failureStatus: HealthStatus.Unhealthy,
         tags: ["db", "sql", "ready"]);
 
-builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
-builder.Services.AddScoped<IPatientRepository, PatientRepository>();
-builder.Services.AddScoped<IDoctorRepository, DoctorRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<LogActionActivityFilter>();
 builder.Services.AddHostedService<HospitalMetricsBackgroundService>();
@@ -214,7 +210,6 @@ app.UseOutputCache();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Branch: emergency requests
 app.Map("/emergency", emergencyApp =>
 {
     emergencyApp.Run(async context =>

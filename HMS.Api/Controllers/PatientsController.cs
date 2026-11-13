@@ -1,161 +1,53 @@
-using FluentValidation;
-using HMS.Api.Data.Entities;
-using HMS.Api.Data.Repositories;
-using HMS.Api.DTOs.Patients;
-using HMS.Api.Validators;
+using HMS.Application.Patients.Commands.RegisterPatient;
+using HMS.Application.Patients.Queries.GetPatients;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PatientsController(IUnitOfWork unitOfWork) : ControllerBase
+public class PatientsController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PatientResponseDto>>> GetAll(
-        [FromQuery] string? bloodType,
-        [FromQuery] string? gender,
+    public async Task<IActionResult> GetAll(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var patients = await unitOfWork.Patients.GetPatientsAsync(bloodType, gender, page, pageSize, cancellationToken);
+        var result = await sender.Send(new GetPatientsQuery(page, pageSize), cancellationToken);
 
-        var dtos = patients.Select(p => new PatientResponseDto
+        if (result.IsFailure)
         {
-            PatientId = p.PatientId,
-            FullName = $"{p.FirstName} {p.LastName}",
-            Dob = p.Dob,
-            Phone = p.Phone,
-            Gender = p.Gender,
-            Email = p.Email,
-            Address = p.Address,
-            BloodType = p.BloodType,
-            ActiveAppointmentsCount = p.Appointments.Count
-        });
-
-        return Ok(dtos);
-    }
-
-    [HttpGet("{id:int}", Name = nameof(GetPatientById))]
-    public async Task<ActionResult<PatientResponseDto>> GetPatientById(int id, CancellationToken cancellationToken)
-    {
-        var patient = await unitOfWork.Patients.GetByIdWithAppointmentsAsync(id, cancellationToken);
-        if (patient is null)
-        {
-            return NotFound(new { message = $"Patient with ID {id} was not found." });
+            return BadRequest(new
+            {
+                code = result.Error.Code,
+                description = result.Error.Description
+            });
         }
 
-        var responseDto = new PatientResponseDto
-        {
-            PatientId = patient.PatientId,
-            FullName = $"{patient.FirstName} {patient.LastName}",
-            Dob = patient.Dob,
-            Phone = patient.Phone,
-            Gender = patient.Gender,
-            Email = patient.Email,
-            Address = patient.Address,
-            BloodType = patient.BloodType,
-            ActiveAppointmentsCount = patient.Appointments.Count
-        };
-
-        return Ok(responseDto);
-    }
-
-    [HttpHead("{id:int}")]
-    public async Task<IActionResult> CheckPatientExists(int id, CancellationToken cancellationToken)
-    {
-        var exists = await unitOfWork.Patients.AnyAsync(p => p.PatientId == id, cancellationToken);
-        return exists ? Ok() : NotFound();
-    }
-
-    [HttpOptions]
-    public IActionResult GetPatientOptions()
-    {
-        Response.Headers.Append("Allow", "GET, POST, PUT, DELETE, HEAD, OPTIONS");
-        return Ok();
+        return Ok(result.Value);
     }
 
     [HttpPost]
-    public async Task<ActionResult<PatientResponseDto>> Create(
-        CreatePatientRequestDto request,
-        IValidator<CreatePatientRequestDto> validator,
+    public async Task<IActionResult> Register(
+        RegisterPatientCommand command,
         CancellationToken cancellationToken)
     {
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
+        var result = await sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
         {
-            validationResult.AddToModelState(ModelState);
-            return ValidationProblem(ModelState);
+            return BadRequest(new
+            {
+                code = result.Error.Code,
+                description = result.Error.Description
+            });
         }
 
-        var patient = new Patient
-        {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Dob = request.Dob,
-            Phone = request.Phone,
-            Gender = request.Gender,
-            Email = request.Email,
-            Address = request.Address,
-            BloodType = request.BloodType
-        };
-
-        await unitOfWork.Patients.AddAsync(patient, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        var responseDto = new PatientResponseDto
-        {
-            PatientId = patient.PatientId,
-            FullName = $"{patient.FirstName} {patient.LastName}",
-            Dob = patient.Dob,
-            Phone = patient.Phone,
-            Gender = patient.Gender,
-            Email = patient.Email,
-            Address = patient.Address,
-            BloodType = patient.BloodType,
-            ActiveAppointmentsCount = 0
-        };
-
-        return CreatedAtAction(nameof(GetPatientById), new { id = patient.PatientId }, responseDto);
-    }
-
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, UpdatePatientRequestDto request, CancellationToken cancellationToken)
-    {
-        var patient = await unitOfWork.Patients.GetByIdAsync(id, cancellationToken);
-        if (patient is null)
-        {
-            return NotFound(new { message = $"Patient with ID {id} was not found." });
-        }
-
-        patient.Phone = request.Phone;
-        patient.Email = request.Email;
-        patient.Address = request.Address;
-
-        unitOfWork.Patients.Update(patient);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return NoContent();
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
-    {
-        var patient = await unitOfWork.Patients.GetByIdWithAppointmentsAsync(id, cancellationToken);
-        if (patient is null)
-        {
-            return NotFound(new { message = $"Patient with ID {id} was not found." });
-        }
-
-        if (patient.Appointments.Count > 0)
-        {
-            return Conflict(new { message = "Cannot delete patient with active appointments on file." });
-        }
-
-        unitOfWork.Patients.Delete(patient);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return NoContent();
+        return CreatedAtAction(
+            nameof(GetAll),
+            new { id = result.Value },
+            new { patientId = result.Value });
     }
 }
