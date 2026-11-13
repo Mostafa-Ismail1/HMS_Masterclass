@@ -2,15 +2,39 @@ using HMS.Domain.Entities.Patients;
 
 namespace HMS.Application.Common.Interfaces;
 
-public record PatientDto(
-    int PatientId,
-    string FullName,
-    DateOnly Dob,
-    string Phone,
-    string Gender,
-    string? Email,
-    string? Address,
-    string? BloodType);
+public class PatientDto
+{
+    public PatientDto() { }
+
+    public PatientDto(
+        int patientId,
+        string fullName,
+        DateOnly dob,
+        string phone,
+        string gender,
+        string? email,
+        string? address,
+        string? bloodType)
+    {
+        PatientId = patientId;
+        FullName = fullName;
+        Dob = dob;
+        Phone = phone;
+        Gender = gender;
+        Email = email;
+        Address = address;
+        BloodType = bloodType;
+    }
+
+    public int PatientId { get; init; }
+    public string FullName { get; init; } = string.Empty;
+    public DateOnly Dob { get; init; }
+    public string Phone { get; init; } = string.Empty;
+    public string Gender { get; init; } = string.Empty;
+    public string? Email { get; init; }
+    public string? Address { get; init; }
+    public string? BloodType { get; init; }
+}
 
 public interface IPatientRepository
 {

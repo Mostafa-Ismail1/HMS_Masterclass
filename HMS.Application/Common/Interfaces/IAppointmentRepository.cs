@@ -10,10 +10,30 @@ public interface IAppointmentRepository
     Task<List<AppointmentDto>> GetAllAsync(CancellationToken cancellationToken = default);
 }
 
-public record AppointmentDto(
-    int AppointmentId,
-    int PatientId,
-    int DoctorId,
-    DateTime AppointmentDate,
-    string Status,
-    string? Reason);
+public class AppointmentDto
+{
+    public AppointmentDto() { }
+
+    public AppointmentDto(
+        int id,
+        int patientId,
+        int doctorId,
+        DateTime appointmentDate,
+        string status,
+        string? reason)
+    {
+        Id = id;
+        PatientId = patientId;
+        DoctorId = doctorId;
+        AppointmentDate = appointmentDate;
+        Status = status;
+        Reason = reason;
+    }
+
+    public int Id { get; init; }
+    public int PatientId { get; init; }
+    public int DoctorId { get; init; }
+    public DateTime AppointmentDate { get; init; }
+    public string Status { get; init; } = string.Empty;
+    public string? Reason { get; init; }
+}

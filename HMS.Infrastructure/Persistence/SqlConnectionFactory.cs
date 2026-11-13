@@ -1,4 +1,5 @@
 using System.Data;
+using Dapper;
 using HMS.Application.Common.Interfaces;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -7,6 +8,11 @@ namespace HMS.Infrastructure.Persistence;
 
 public class SqlConnectionFactory(IConfiguration configuration) : ISqlConnectionFactory
 {
+    static SqlConnectionFactory()
+    {
+        SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+    }
+
     public IDbConnection CreateConnection()
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
