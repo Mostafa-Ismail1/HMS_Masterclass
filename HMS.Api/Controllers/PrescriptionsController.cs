@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using HMS.Application.Prescriptions.Commands.IssuePrescription;
 using HMS.Application.Prescriptions.Queries.GetPrescriptions;
 using MediatR;
@@ -5,8 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class PrescriptionsController(ISender sender) : ControllerBase
 {
     [HttpGet]

@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using HMS.Application.Invoices.Commands.CreateInvoice;
 using HMS.Application.Invoices.Commands.PayInvoice;
 using HMS.Application.Invoices.Queries.GetInvoices;
@@ -6,8 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class InvoicesController(ISender sender) : ControllerBase
 {
     [HttpGet]

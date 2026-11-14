@@ -1,11 +1,13 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using HMS.Api;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class HospitalController(IOptions<HospitalSettingsOptions> options) : ControllerBase
 {
     [HttpGet("info")]

@@ -1,7 +1,7 @@
 @baseUrl = https://localhost:7219
 
 ### Auth
-POST {{baseUrl}}/api/auth/login
+POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
 
 {
@@ -40,10 +40,10 @@ Content-Type: application/json
 }
 
 ### Departments
-GET {{baseUrl}}/api/departments
+GET {{baseUrl}}/api/v1/departments
 
 ###
-POST {{baseUrl}}/api/departments
+POST {{baseUrl}}/api/v1/departments
 Content-Type: application/json
 
 {
@@ -52,10 +52,10 @@ Content-Type: application/json
 }
 
 ### Doctors
-GET {{baseUrl}}/api/doctors
+GET {{baseUrl}}/api/v1/doctors
 
 ###
-POST {{baseUrl}}/api/doctors
+POST {{baseUrl}}/api/v1/doctors
 Content-Type: application/json
 
 {
@@ -65,10 +65,10 @@ Content-Type: application/json
 }
 
 ### Medications
-GET {{baseUrl}}/api/medications
+GET {{baseUrl}}/api/v1/medications
 
 ### Prescriptions
-POST {{baseUrl}}/api/prescriptions
+POST {{baseUrl}}/api/v1/prescriptions
 Content-Type: application/json
 
 {
@@ -86,16 +86,19 @@ Content-Type: application/json
 }
 
 ### Lab Orders
-GET {{baseUrl}}/api/laborders
+GET {{baseUrl}}/api/v1/laborders
 
 ### Admissions
-GET {{baseUrl}}/api/admissions
+GET {{baseUrl}}/api/v1/admissions
 
 ### Invoices
-GET {{baseUrl}}/api/invoices
+GET {{baseUrl}}/api/v1/invoices
 
 ### Staff
-GET {{baseUrl}}/api/staff
+GET {{baseUrl}}/api/v1/staff
 
-### Health
+### Health Liveness
 GET {{baseUrl}}/health
+
+### Health Readiness
+GET {{baseUrl}}/health/ready

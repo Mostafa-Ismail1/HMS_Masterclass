@@ -1,11 +1,13 @@
+using Asp.Versioning;
 using HMS.Api.DTOs.Auth;
 using HMS.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class AuthController(IJwtTokenGenerator jwtTokenGenerator) : ControllerBase
 {
     private static readonly Dictionary<string, RefreshTokenRecord> _refreshTokens = new();

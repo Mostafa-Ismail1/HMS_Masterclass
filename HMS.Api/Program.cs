@@ -229,14 +229,6 @@ app.UseOutputCache();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.Map("/emergency", emergencyApp =>
-{
-    emergencyApp.Run(async context =>
-    {
-        await context.Response.WriteAsync("Emergency Department: Fast-track pipeline active!");
-    });
-});
-
 app.MapHealthChecks("/health");
 
 app.MapHealthChecks("/health/ready", new HealthCheckOptions

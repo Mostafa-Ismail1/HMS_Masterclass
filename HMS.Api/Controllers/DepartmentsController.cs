@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using HMS.Application.Departments.Commands.CreateDepartment;
 using HMS.Application.Departments.Queries.GetDepartments;
 using MediatR;
@@ -5,8 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class DepartmentsController(ISender sender) : ControllerBase
 {
     [HttpGet]

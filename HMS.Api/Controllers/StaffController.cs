@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using HMS.Application.Staff.Commands.CreateStaff;
 using HMS.Application.Staff.Queries.GetNurses;
 using HMS.Application.Staff.Queries.GetStaff;
@@ -6,8 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class StaffController(ISender sender) : ControllerBase
 {
     [HttpGet]

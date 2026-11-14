@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using HMS.Application.LabOrders.Commands.CreateLabOrder;
 using HMS.Application.LabOrders.Commands.RecordLabResult;
 using HMS.Application.LabOrders.Queries.GetLabOrders;
@@ -7,8 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class LabOrdersController(ISender sender) : ControllerBase
 {
     [HttpGet]

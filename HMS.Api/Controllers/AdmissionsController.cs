@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using HMS.Application.Admissions.Commands.AdmitPatient;
 using HMS.Application.Admissions.Commands.DischargePatient;
 using HMS.Application.Admissions.Queries.GetAdmissions;
@@ -7,8 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Api.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class AdmissionsController(ISender sender) : ControllerBase
 {
     [HttpGet]
